@@ -1,8 +1,9 @@
 # CD-ATTACK
-The Implemention of paper "Adversarial Attack on Community Detection by Hiding Individuals". It is accepted in 2014
+The Implemention of paper "Adversarial Attack on Community Detection by Hiding Individuals". It is accepted by The Web Conference 2020.
 
-![CD-ATTACK](/home/picture/1.png)
-##Usage
+![CD-ATTACK](https://github.com/halimiqi/CD-ATTACK/blob/master/cdattack.png)  
+
+## Usage
 
 To run the CD-ATTACK model, please run the *main.py* as `python main.py`
 
@@ -14,7 +15,7 @@ The default dataset is dblp with fixed target users. For other changeable parame
 The model is implemented based on python=3.6.7 and tensorflow =1.15. Other requirements of the enviorment is listed in *requirements.txt*.
 
 ## Setting
-The code is training on Nvidia-TitanX GPU with 12 Gb RAM. The CPU is i7-7800X and the memory is 64Gb. This is not the minimum setting of PC. Other hardware may also feasible for this implemention.
+The code is training on Nvidia-TitanX GPU with 12 Gb RAM. The CPU is i7-7800X and the memory is 64Gb. This is not the minimum required setting for this project. Other hardware setting may also feasible for this implemention.
 
 
 
