@@ -7,7 +7,7 @@ The Implemention of paper "Adversarial Attack on Community Detection by Hiding I
 
 To run the CD-ATTACK model, please run the *main.py* as `python main.py`
 
-The baselines proposed in the paper is implemented in baselines.py. Run `python baselines.py` to run it.
+The baselines proposed in the paper is implemented in *baselines.py*. `python baselines.py` to run it.
 
 The default dataset is dblp with fixed target users. For other changeable parameters are shown in *main.py* 
  
