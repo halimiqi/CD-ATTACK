@@ -55,7 +55,7 @@ flags.DEFINE_string('dis_name', "PPNP", 'the name of discriminator, it can be "G
 #flags.DEFINE_integer("repeat", 1000, "the numbers of repeat for your datasets")
 flags.DEFINE_string("trained_base_path", '191216023843', "The path for the trained base model")
 flags.DEFINE_string("trained_our_path", '200304135412', "The path for the trained model")
-flags.DEFINE_integer("k", 20, "The k edges to delete")
+flags.DEFINE_integer("k", 10, "The k edges to delete")
 flags.DEFINE_integer('baseline_target_budget', 5, 'the parametor for graphite generator')
 flags.DEFINE_integer("op", 1, "Training or Test")
 flags.DEFINE_boolean("train",True, "Training or test")
