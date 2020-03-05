@@ -25,7 +25,7 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 # flags.DEFINE_float('learning_rate', 0.005, 'Initial learning rate.')
 flags.DEFINE_integer('n_clusters', 10, 'Number of clusters.')
-flags.DEFINE_string("target_index_list","10,35", "The index for the target_index")
+#flags.DEFINE_string("target_index_list","10,35", "The index for the target_index")
 flags.DEFINE_integer('epochs', 2000, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 32, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
@@ -38,7 +38,7 @@ flags.DEFINE_float('g_gamma', 1e-06, 'the parametor for generate loss, it has on
 flags.DEFINE_float('G_KL_r', 0.1, 'The r parameters for the G KL loss')
 flags.DEFINE_float('mincut_r', 0.01, 'The r parameters for the cutmin loss orth loss')
 flags.DEFINE_float('autoregressive_scalar', 0.2, 'the parametor for graphite generator')
-flags.DEFINE_string('model', 'gae_gan', 'Model string.')
+flags.DEFINE_string('model', 'cdattack', 'Model string.')
 flags.DEFINE_string('generator', 'dense', 'Which generator will be used') # the options are "inner_product", "graphite", "graphite_attention", "dense_attention" , "dense"
 flags.DEFINE_string('dataset', 'dblp', 'Dataset string it is qq or dblp.')
 flags.DEFINE_integer('features', 1, 'Whether to use features (1) or not (0).')
@@ -60,39 +60,6 @@ flags.DEFINE_integer('baseline_target_budget', 5, 'the parametor for graphite ge
 flags.DEFINE_integer("op", 1, "Training or Test")
 flags.DEFINE_boolean("train",True, "Training or test")
 ###############################
-if_drop_edge = True
-if_save_model = FLAGS.train
-# if train the discriminator
-if_train_dis = False
-restore_trained_our = not FLAGS.train
-showed_target_idx = 0   # the target index group of targets you want to show
-##################################
-### read and process the graph
-model_str = FLAGS.model
-dataset_str = FLAGS.dataset
-# Load data
-if FLAGS.dataset == "dblp":
-    adj = sp.load_npz("./data/dblp/dblp_adj_sparse_small.npz")
-    features = np.load("./data/dblp/dblp_features_small.npy")
-    features_normlize = normalize(features, axis=0, norm='max')
-    features = sp.csr_matrix(features_normlize)
-    target_list = np.load("./data/dblp/dblp_target_label_small.npy")
-elif FLAGS.dataset == "qq":
-    adj = sp.load_npz('./data/1215_qq_data_10_3/qq_adj_all_csr_5000_1215_10_3.npz')
-    features = np.load("data/1215_qq_data_10_3/qq_features_5000_1215_10_3.npy")
-    features_normlize = normalize(features, axis=0, norm='max')
-    features = sp.csr_matrix(features_normlize)
-    target_list =  np.load("data/1215_qq_data_10_3/qq_target_label_5000_1215_10_3.npy")
-# Store original adjacency matrix (without diagonal entries) for later
-a = 1
-
-adj_orig = adj
-adj_orig = adj_orig - sp.dia_matrix((adj_orig.diagonal()[np.newaxis, :], [0]), shape=adj_orig.shape)
-adj_orig.eliminate_zeros()
-if FLAGS.features == 0:
-    features = sp.identity(features.shape[0])  # featureless
-# Some preprocessing
-adj_norm, adj_norm_sparse = preprocess_graph(adj)
 
 placeholders = {
     'features': tf.sparse_placeholder(tf.float32),
@@ -102,57 +69,67 @@ placeholders = {
     #'comm_label': tf.placeholder(tf.float32)
 }
 
-num_nodes = adj.shape[0]
-features = sparse_to_tuple(features.tocoo())
-num_features = features[2][1]
-features_nonzero = features[1].shape[0]
 
-# Create model
-
-    #session part
-cost_val = []
-acc_val = []
-
-cost_val = []
-acc_val = []
-val_roc_score = []
-
-adj_label = adj_orig + sp.eye(adj.shape[0])
-adj_label_sparse = adj_label
-adj_label = sparse_to_tuple(adj_label)
-
-def get_roc_score(edges_pos, edges_neg,feed_dict,sess, model, emb=None):
-    if emb is None:
-        feed_dict.update({placeholders['dropout']: 0})
-        adj_rec = sess.run(model.x_tilde, feed_dict=feed_dict)
-
-    def sigmoid(x):
-        return 1 / (1 + np.exp(-x))
-
-    # Predict on test set of edges
-    preds = []
-    pos = []
-    for e in edges_pos:
-        #preds.append(sigmoid(adj_rec[e[0], e[1]]))
-        preds.append(adj_rec[e[0], e[1]])
-        pos.append(adj_orig[e[0], e[1]])
-    preds_neg = []
-    neg = []
-    for e in edges_neg:
-        preds_neg.append(sigmoid(adj_rec[e[0], e[1]]))
-        neg.append(adj_orig[e[0], e[1]])
-    preds_all = np.hstack([preds, preds_neg])
-    labels_all = np.hstack([np.ones(len(preds)), np.zeros(len(preds_neg))])
-    roc_score = roc_auc_score(labels_all, preds_all)
-    ap_score = average_precision_score(labels_all, preds_all)
-    return roc_score, ap_score
 
 def get_new_adj(feed_dict, sess, model):
     new_adj = model.new_adj_without_norm.eval(session=sess, feed_dict=feed_dict)
     return new_adj
 
 # Train model
-def train():
+def train(unused):
+    if_drop_edge = True
+    if_save_model = FLAGS.train
+    # if train the discriminator
+    if_train_dis = False
+    restore_trained_our = not FLAGS.train
+    showed_target_idx = 0   # the target index group of targets you want to show
+    ##################################
+    ### read and process the graph
+    model_str = FLAGS.model
+    dataset_str = FLAGS.dataset
+    # Load data
+    if FLAGS.dataset == "dblp":
+        adj = sp.load_npz("./data/dblp/dblp_adj_sparse_small.npz")
+        features = np.load("./data/dblp/dblp_features_small.npy")
+        features_normlize = normalize(features, axis=0, norm='max')
+        features = sp.csr_matrix(features_normlize)
+        target_list = np.load("./data/dblp/dblp_target_label_small.npy")
+    elif FLAGS.dataset == "qq":
+        adj = sp.load_npz('./data/1215_qq_data_10_3/qq_adj_all_csr_5000_1215_10_3.npz')
+        features = np.load("data/1215_qq_data_10_3/qq_features_5000_1215_10_3.npy")
+        features_normlize = normalize(features, axis=0, norm='max')
+        features = sp.csr_matrix(features_normlize)
+        target_list =  np.load("data/1215_qq_data_10_3/qq_target_label_5000_1215_10_3.npy")
+    # Store original adjacency matrix (without diagonal entries) for later
+    a = 1
+
+    adj_orig = adj
+    adj_orig = adj_orig - sp.dia_matrix((adj_orig.diagonal()[np.newaxis, :], [0]), shape=adj_orig.shape)
+    adj_orig.eliminate_zeros()
+    if FLAGS.features == 0:
+        features = sp.identity(features.shape[0])  # featureless
+    # Some preprocessing
+    adj_norm, adj_norm_sparse = preprocess_graph(adj)
+    num_nodes = adj.shape[0]
+    features = sparse_to_tuple(features.tocoo())
+    num_features = features[2][1]
+    features_nonzero = features[1].shape[0]
+
+    # Create model
+
+        #session part
+    cost_val = []
+    acc_val = []
+
+    cost_val = []
+    acc_val = []
+    val_roc_score = []
+
+    adj_label = adj_orig + sp.eye(adj.shape[0])
+    adj_label_sparse = adj_label
+    adj_label = sparse_to_tuple(adj_label)
+
+    ##################
     if_drop_edge = True
     ## set the checkpoint path
     checkpoints_dir_base = "./checkpoints"
@@ -174,7 +151,7 @@ def train():
     }
     # build models
     model = None
-    if model_str == "gae_gan":
+    if model_str == "cdattack":
         model = cdattack(placeholders, num_features, num_nodes, features_nonzero, new_learning_rate, target_list, FLAGS.alpha, FLAGS.dis_name)
         model.build_model()
     pos_weight = float(adj.shape[0] * adj.shape[0] - adj.sum()) / adj.sum()
@@ -182,7 +159,7 @@ def train():
     opt = 0
     # Optimizer
     with tf.name_scope('optimizer'):
-        if model_str == 'gae_gan':
+        if model_str == 'cdattack':
             opt = Optimizercdattack(preds=tf.reshape(model.x_tilde, [-1]),
                                   labels=tf.reshape(
                                       tf.sparse_tensor_to_dense(placeholders['adj_orig'], validate_indices=False),
