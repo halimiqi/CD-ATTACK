@@ -292,14 +292,6 @@ def train(unused):
     #################################### the KL for the discriminator
     gaegan_KL, dis_KL = sess.run([model.gaegan_KL, model.dis_KL], feed_dict = feed_dict)
     gaegan_pred, clean_pred = sess.run([model.Dis_z_gaegan, model.Dis_z_clean], feed_dict)
-    # print(gaegan_pred)
-    # print(clean_pred)
-    # print("**##")
-    # print("The modified KL is :")
-    # print(gaegan_KL)
-    # print("The clean KL is :")
-    # print(dis_KL)
-    # print("**##")
     ####################################################################
     return new_adj, x_tilde_out
 
