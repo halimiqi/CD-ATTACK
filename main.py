@@ -329,4 +329,5 @@ def train():
 
 FLAGS = flags.FLAGS
 if __name__ == "__main__":
-    new_adj, x_tilde_out = train()
+    tf.app.run(train)
+    #new_adj, x_tilde_out = train()

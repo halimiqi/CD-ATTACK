@@ -9,9 +9,10 @@ To train the CD-ATTACK model, please run the *main.py* as `python main.py`
 
 To restore a trained model, the command is `python main.py --train False --trained_our_path [THE CHECKPOINT NAME]`
 
-The checkpoint name is formated as the string of the time point of starting the training process. eg. `python main.py --train False --trainde_our_path 200304135412` .The checkpoints will be recorded automatically for every training process. And the checkpoints files are placed in directory checkpoint/
+The checkpoint name is formated as the string of the time point of starting the training process. eg. 
+`python main.py --train False --trainde_our_path 200304135412` .The checkpoints will be recorded automatically for every training process. And the checkpoints files are placed in directory checkpoints/
 
-The default dataset is dblp with fixed target users. For other changeable parameters are shown in *main.py* 
+The default dataset is dblp with fixed target users. To change the other dataset or modify other changeable parameters, please run `python main.py -h` to see the details
  
 ## Enviorment
 The model is implemented based on python=3.6.7 and tensorflow =1.15. Other requirements of the enviorment is listed in *requirements.txt*.
