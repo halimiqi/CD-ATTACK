@@ -3,13 +3,13 @@ import numpy as np
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-class Optimizergaegan(object):
+class Optimizercdattack(object):
     def __init__(self, preds, labels, model, num_nodes, pos_weight, norm, target_list, global_step, new_learning_rate, if_drop_edge = True):
         """
         The initial functions
         :param preds: it is not used in model
         :param labels: it is not used in model
-        :param model: the model built from gaegan.py
+        :param model: the model built from cdattack.py
         :param num_nodes: the number of the nodes
         :param pos_weight: not used in the model
         :param norm: not used in the model

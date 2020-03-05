@@ -9,9 +9,9 @@ flags = tf.app.flags
 FLAGS = flags.FLAGS
 
 
-class gaegan(object):
+class cdattack(object):
     """
-    the gaegan model
+    the cdattack model
     """
     def __init__(self,placeholders, num_features,num_nodes, features_nonzero,learning_rate_init,target_list, alpha , dis_name,if_drop_edge = True, **kwargs):
         """
