@@ -22,7 +22,7 @@ class cdattack(object):
         :param learning_rate_init: the initial learning rate
         :param target_list: the core member indexes of each groups
         :param alpha: the alpha in the ppnp stations
-        :param dis_name: the discriminator name used for discriminator mock part "GCN" and "PPNP" are proposed
+        :param dis_name: the community detection method name used for community mock part "GCN" and "PPNP" are proposed
         :param if_drop_edge:  It represents we train the clean model or the modified model.
                 The clean model is used in baselines and modified model is used in main model.
         :param kwargs:
@@ -82,19 +82,17 @@ class cdattack(object):
             self.x_tilde = self.generate_dense(self.z_x, self.z_x.shape[1], self.input_dim)
             self.x_tilde_output_ori = self.x_tilde
         if self.if_drop_edge != False:
-            #self.x_tilde, self.new_adj_output = self.delete_k_edge(self.x_tilde, self.adj_ori_dense)  # convert the original graph with k edges
             self.x_tilde, self.new_adj_output = self.delete_k_edge_min_new(self.x_tilde, self.adj_ori_dense, k = FLAGS.k)
-            #self.x_tilde, self.new_adj_output = self.delete_k_edge_max(self.x_tilde, self.adj_ori_dense, k = FLAGS.k)
             self.x_tilde_deleted = self.x_tilde
             self.new_adj_without_norm = self.new_adj_output
             self.new_adj_output = self.normalize_graph(self.new_adj_output)
             # this time normalize the graph with D-1/2A D-1/2
         if self.dis_name == "GCN":
-            self.vaeD_tilde, self.gaegan_KL, self.Dis_z_gaegan = self.discriminate_mock_detect(self.inputs, self.new_adj_output)
-            self.realD_tilde , self.dis_KL, self.Dis_z_clean= self.discriminate_mock_detect(self.inputs, self.adj_dense, reuse=True)
+            self.vaeD_tilde, self.gaegan_KL, self.Dis_z_gaegan = self.community_mock_detect(self.inputs, self.new_adj_output)
+            self.realD_tilde , self.dis_KL, self.Dis_z_clean= self.community_mock_detect(self.inputs, self.adj_dense, reuse=True)
         if self.dis_name == "PPNP":
-            self.vaeD_tilde, self.gaegan_KL, self.Dis_z_gaegan = self.discriminate_mock_ppnp(self.inputs, self.new_adj_output, alpha = self.alpha)
-            self.realD_tilde , self.dis_KL, self.Dis_z_clean= self.discriminate_mock_ppnp(self.inputs, self.adj_dense, alpha = self.alpha,reuse=True)
+            self.vaeD_tilde, self.gaegan_KL, self.Dis_z_gaegan = self.community_mock_ppnp(self.inputs, self.new_adj_output, alpha = self.alpha)
+            self.realD_tilde , self.dis_KL, self.Dis_z_clean= self.community_mock_ppnp(self.inputs, self.adj_dense, alpha = self.alpha,reuse=True)
         a = 1
         return
 
@@ -121,7 +119,6 @@ class cdattack(object):
         ori_adj_diag = tf.matrix_diag(tf.matrix_diag_part(ori_adj))  # diagnal matrix
         new_adj_diag = tf.matrix_diag(tf.matrix_diag_part(new_adj))  # diagnal matrix
         ori_adj_diag = tf.reshape(ori_adj_diag, [-1])
-        #new_adj_diag = tf.reshape(new_adj_diag, [-1])
         new_adj_flat = tf.reshape(new_adj, [-1])
         ori_adj_flat = tf.reshape(ori_adj, [-1])
         # doing the softmax function
@@ -145,22 +142,16 @@ class cdattack(object):
             self.delete_onehot_mask = tf.one_hot(self.delete_mask_idx, depth = self.n_samples, dtype = tf.int32)
             self.delete_onehot_mask = tf.cast(self.delete_onehot_mask, tf.bool)
             self.mask = tf.where(self.delete_onehot_mask, x=tf.zeros_like(self.delete_onehot_mask), y=self.mask, name="softmax_mask")
-            #self.mask = self.mask - self.delete_onehot_mask
         ######################################  debug
         ######################################
         self.mask = tf.reshape(self.mask, [-1])
-        # self.update_mask= tf.assign(self.mask[new_pos], 0)
-        # new_adj_out = tf.multiply(new_adj_flat, self.mask)   # the upper triangular
-        # ori_adj_out = tf.multiply(ori_adj_flat, self.mask)
         new_adj_out = tf.where(self.mask, x = new_adj_flat, y = tf.zeros_like(new_adj_flat), name = "mask_new_adj")
         ori_adj_out = tf.where(self.mask ,x = ori_adj_flat, y = tf.zeros_like(ori_adj_flat), name = "mask_ori_adj")
         # add the transpose and the lower part of the model
-        #new_adj_out = new_adj_out + new_adj_diag
         ori_adj_out = ori_adj_out + ori_adj_diag
         ## having the softmax
         ori_adj_out = tf.reshape(ori_adj_out, [self.n_samples, self.n_samples])
         # make the matrix system
-        #new_adj_out = new_adj_out + (tf.transpose(new_adj_out) - tf.matrix_diag(tf.matrix_diag_part(new_adj_out)))
         ori_adj_out = ori_adj_out + (tf.transpose(ori_adj_out) - tf.matrix_diag(tf.matrix_diag_part(ori_adj_out)))
         self.ori_adj_out = ori_adj_out
         return new_adj_out, ori_adj_out
@@ -220,11 +211,9 @@ class cdattack(object):
             for i in range(1, self.n_samples):
                 update_temp = input_z[i, :] * input_z
                 final_update = tf.concat([final_update, update_temp], axis=0)
-            #final_update_d1 = tf.tanh(self.dense1(final_update))
             final_update_d1 = self.dense1(final_update)
             reconstructions_weights = tf.nn.softmax(self.dense2(final_update_d1))
             reconstructions = reconstructions_weights * final_update
-            #reconstructions =tf.sigmoid(self.dense3(reconstructions))
             reconstructions =tf.nn.softmax(self.dense3(reconstructions))
             reconstructions = tf.reshape(reconstructions, [self.n_samples, self.n_samples])
         return reconstructions
@@ -247,26 +236,24 @@ class cdattack(object):
             for i in range(0, self.n_samples):
                 update_temp.append(input_z[i, :] * input_z)
             final_update = tf.stack(update_temp, axis=0)
-            #reconstructions = tf.layers.dense(final_update, 1,use_bias=False, activation = tf.nn.sigmoid, name="gen_dense2")
             reconstructions = tf.keras.layers.Dense(1,use_bias = False,
                                                     activation=tf.nn.sigmoid, name="gen_dense2" )(final_update)
             reconstructions = tf.squeeze(reconstructions)
-            #reconstructions = tf.reshape(reconstructions, [self.n_samples, self.n_samples])
         return reconstructions
 
 
-    def discriminate_mock_detect(self, inputs,new_adj,  reuse = False):
+    def community_mock_detect(self, inputs,new_adj,  reuse = False):
         """
-        The discriminator part of the model
+        The community detection part of the model
         :param inputs: the features of the graph
         :param new_adj: the new adj got from generator part
         :param reuse: if reuse the variables
         :return:self.dis_output_softmax: the percentage output of the community results
-        self.Dis_comm_loss_KL: the KL loss of the discriminator
+        self.Dis_comm_loss_KL: the KL loss of the community detection part
         self.Dis_target_pred_out : the original community output for each target node
         """
         # this methods uses this part to mock the community detection algorithm
-        with tf.variable_scope('discriminate') as scope:
+        with tf.variable_scope('community') as scope:
             if reuse == True:
                 scope.reuse_variables()
 
@@ -289,7 +276,6 @@ class cdattack(object):
             self.dis_z_mean_norm = tf.nn.softmax(self.dis_z_mean, axis = -1)
             for targets in self.target_list:
                 targets_indices = [[x] for x in targets]
-                #self.G_target_pred = model.vaeD_tilde[targets, :]
                 self.Dis_target_pred = tf.gather_nd(self.dis_z_mean_norm, targets_indices)
                 self.Dis_target_pred_out = self.Dis_target_pred
                 ## calculate the KL divergence
@@ -307,22 +293,21 @@ class cdattack(object):
             self.dis_output = FullyConnect(output_size = FLAGS.n_clusters, scope='dis_fully2')(self.dis_fully1)
             # the softmax layer for the model
             self.dis_output_softmax = tf.nn.softmax(self.dis_output, axis=-1)
-            #self.dis_output = self.dis_z_mean
         return self.dis_output_softmax, self.Dis_comm_loss_KL,self.Dis_target_pred_out
 
-    def discriminate_mock_ppnp(self, inputs,new_adj, alpha, reuse = False):
+    def community_mock_ppnp(self, inputs,new_adj, alpha, reuse = False):
         """
-        The discriminator part of the model with ppnp kernels
+        The community detection part of the model with ppnp kernels
         :param inputs: the features of the graph
         :param new_adj: the new adj from generator part
         :param alpha: the parametor for ppnp
         :param reuse: if reuse the variables
         :return:self.dis_output_softmax: the percentage output of the community results
-        self.Dis_comm_loss_KL: the KL loss of the discriminator
+        self.Dis_comm_loss_KL: the KL loss of the community dectection
         self.Dis_target_pred_out : the original community output for each target node
         """
         # this methods uses this part to mock the community detection algorithm
-        with tf.variable_scope('discriminate_ppnp') as scope:
+        with tf.variable_scope('community_ppnp') as scope:
             if reuse == True:
                 scope.reuse_variables()
 
@@ -337,17 +322,10 @@ class cdattack(object):
                                                   logging=self.logging, name ="ppnp_conv1_sparse")((inputs, new_adj))
 
 
-            # self.dis_z_mean = GraphConvolution_denseadj(input_dim=FLAGS.hidden1,
-            #                                output_dim=FLAGS.hidden2,
-            #                                adj=new_adj,
-            #                                act=lambda x: x,
-            #                                dropout=self.dropout,
-            #                                logging=self.logging, name='dis_conv2')((self.dis_hidden, new_adj))
             ############################
             self.dis_z_mean_norm = tf.nn.softmax(self.dis_z_mean, axis = -1)
             for targets in self.target_list:
                 targets_indices = [[x] for x in targets]
-                #self.G_target_pred = model.vaeD_tilde[targets, :]
                 self.Dis_target_pred = tf.gather_nd(self.dis_z_mean_norm, targets_indices)
                 self.Dis_target_pred_out = self.Dis_target_pred
                 ## calculate the KL divergence
@@ -365,7 +343,6 @@ class cdattack(object):
             self.dis_output = FullyConnect(output_size = FLAGS.n_clusters, scope='dis_fully2')(self.dis_fully1)
             # the softmax layer for the model
             self.dis_output_softmax = tf.nn.softmax(self.dis_output, axis=-1)
-            #self.dis_output = self.dis_z_mean
         return self.dis_output_softmax, self.Dis_comm_loss_KL,self.Dis_target_pred_out
 
     def normalize_graph(self, adj):
@@ -376,9 +353,7 @@ class cdattack(object):
         """
         adj_ = adj
         rowsum = tf.reduce_sum(adj_, axis=0)
-        # rowsum = np.array(adj_.sum(1))
         degree_mat_inv_sqrt = tf.matrix_diag(tf.pow(rowsum, tf.constant(-0.5)))
-        # adj_normalized = adj_.dot(degree_mat_inv_sqrt).transpose().dot(degree_mat_inv_sqrt).tocoo()
         adj_normalized = tf.matmul(tf.matmul(adj_, tf.transpose(degree_mat_inv_sqrt)), degree_mat_inv_sqrt)
         return adj_normalized
 
@@ -390,7 +365,6 @@ class cdattack(object):
         """
         # convert adj into 0 and 1
         rowsum = tf.reduce_sum(adj, axis = -1)
-        #rowsum = np.array(adj_.sum(1))
         degree_mat_inv_sqrt = tf.matrix_diag(tf.pow(rowsum, tf.constant(-0.5)))
         adj_normalized = tf.matmul(tf.transpose(tf.matmul(adj, degree_mat_inv_sqrt)), degree_mat_inv_sqrt)
         return adj_normalized
