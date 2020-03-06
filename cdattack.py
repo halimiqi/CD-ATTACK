@@ -8,7 +8,6 @@ from ops import batch_normal
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-
 class cdattack(object):
     """
     the cdattack model
@@ -131,7 +130,7 @@ class cdattack(object):
         new_adj_for_del_softmax = new_adj_for_del_exp / tf.reduce_sum(new_adj_for_del_exp)
         new_adj_for_del_softmax = tf.reshape(new_adj_for_del_softmax, [-1])
         self.new_adj_for_del_softmax  = new_adj_for_del_softmax
-        new_indexes = tf.multinomial(tf.log([new_adj_for_del_softmax]), FLAGS.k)
+        new_indexes = tf.random.categorical(tf.log([new_adj_for_del_softmax]), FLAGS.k)
         ######################## debug
         self.new_indexes = new_indexes
         ########################
@@ -248,7 +247,9 @@ class cdattack(object):
             for i in range(0, self.n_samples):
                 update_temp.append(input_z[i, :] * input_z)
             final_update = tf.stack(update_temp, axis=0)
-            reconstructions = tf.layers.dense(final_update, 1,use_bias=False, activation = tf.nn.sigmoid, name="gen_dense2")
+            #reconstructions = tf.layers.dense(final_update, 1,use_bias=False, activation = tf.nn.sigmoid, name="gen_dense2")
+            reconstructions = tf.keras.layers.Dense(1,use_bias = False,
+                                                    activation=tf.nn.sigmoid, name="gen_dense2" )(final_update)
             reconstructions = tf.squeeze(reconstructions)
             #reconstructions = tf.reshape(reconstructions, [self.n_samples, self.n_samples])
         return reconstructions

@@ -14,7 +14,6 @@ import os
 from sklearn.metrics import normalized_mutual_info_score
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from tensorflow.python.client import device_lib
-print(device_lib.list_local_devices())
 from preprocessing import preprocess_graph, construct_feed_dict, sparse_to_tuple, mask_test_edges,get_target_nodes_and_comm_labels, construct_feed_dict_trained
 from ops import print_mu, print_mu2
 # set the random seed
@@ -23,6 +22,7 @@ tf.set_random_seed(121)
 # Settings
 flags = tf.app.flags
 FLAGS = flags.FLAGS
+tf.logging.set_verbosity(tf.logging.ERROR)
 # flags.DEFINE_float('learning_rate', 0.005, 'Initial learning rate.')
 flags.DEFINE_integer('n_clusters', 10, 'Number of clusters.')
 #flags.DEFINE_string("target_index_list","10,35", "The index for the target_index")
@@ -266,12 +266,12 @@ def train(unused):
     feed_dict.update({placeholders['dropout']: 0})
     pred_dis_res = model.vaeD_tilde.eval(session=sess, feed_dict=feed_dict)
     print("*" * 30)
-    print("the final results:\n")
-    targets = target_list[showed_target_idx]
-    for target in targets:
-        pred_target = pred_dis_res[target, :]
-        print("The target %d:" % (target))
-        print(pred_target)
+    #print("the final results:\n")
+    #targets = target_list[showed_target_idx]
+    #for target in targets:
+    #    pred_target = pred_dis_res[target, :]
+    #    print("The target %d:" % (target))
+    #    print(pred_target)
     print("*" * 15)
     print("The modified adj mu")
     print_mu(target_list, pred_dis_res, FLAGS.n_clusters)
@@ -299,4 +299,3 @@ def train(unused):
 FLAGS = flags.FLAGS
 if __name__ == "__main__":
     tf.app.run(train)
-    #new_adj, x_tilde_out = train()
