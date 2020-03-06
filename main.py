@@ -23,6 +23,8 @@ tf.set_random_seed(121)
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 tf.logging.set_verbosity(tf.logging.ERROR)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ["KMP_WARNINGS"] = "FALSE"
 # flags.DEFINE_float('learning_rate', 0.005, 'Initial learning rate.')
 flags.DEFINE_integer('n_clusters', 10, 'Number of clusters.')
 #flags.DEFINE_string("target_index_list","10,35", "The index for the target_index")
@@ -40,7 +42,7 @@ flags.DEFINE_float('mincut_r', 0.01, 'The r parameters for the cutmin loss orth 
 flags.DEFINE_float('autoregressive_scalar', 0.2, 'the parametor for graphite generator')
 flags.DEFINE_string('model', 'cdattack', 'Model string.')
 flags.DEFINE_string('generator', 'dense', 'Which generator will be used') # the options are "inner_product", "graphite", "graphite_attention", "dense_attention" , "dense"
-flags.DEFINE_string('dataset', 'dblp', 'Dataset string it is qq or dblp.')
+flags.DEFINE_string('dataset', 'dblp', 'Dataset string it is finance or dblp.')
 flags.DEFINE_integer('features', 1, 'Whether to use features (1) or not (0).')
 # seting from the vae gan
 from tensorflow.python.client import device_lib
@@ -58,7 +60,7 @@ flags.DEFINE_string("trained_our_path", '200304135412', "The path for the traine
 flags.DEFINE_integer("k", 10, "The k edges to delete")
 flags.DEFINE_integer('baseline_target_budget', 5, 'the parametor for graphite generator')
 flags.DEFINE_integer("op", 1, "Training or Test")
-flags.DEFINE_boolean("train",True, "Training or test")
+flags.DEFINE_boolean('test', False, "Training or not")
 ###############################
 
 placeholders = {
@@ -69,8 +71,6 @@ placeholders = {
     #'comm_label': tf.placeholder(tf.float32)
 }
 
-
-
 def get_new_adj(feed_dict, sess, model):
     new_adj = model.new_adj_without_norm.eval(session=sess, feed_dict=feed_dict)
     return new_adj
@@ -78,10 +78,10 @@ def get_new_adj(feed_dict, sess, model):
 # Train model
 def train(unused):
     if_drop_edge = True
-    if_save_model = FLAGS.train
+    if_save_model = not FLAGS.test
     # if train the discriminator
     if_train_dis = False
-    restore_trained_our = not FLAGS.train
+    restore_trained_our = FLAGS.test
     showed_target_idx = 0   # the target index group of targets you want to show
     ##################################
     ### read and process the graph
@@ -94,12 +94,12 @@ def train(unused):
         features_normlize = normalize(features, axis=0, norm='max')
         features = sp.csr_matrix(features_normlize)
         target_list = np.load("./data/dblp/dblp_target_label_small.npy")
-    elif FLAGS.dataset == "qq":
-        adj = sp.load_npz('./data/1215_qq_data_10_3/qq_adj_all_csr_5000_1215_10_3.npz')
-        features = np.load("data/1215_qq_data_10_3/qq_features_5000_1215_10_3.npy")
+    elif FLAGS.dataset == "finance":
+        adj = sp.load_npz('./data/finance/finance_adj_5000.npz')
+        features = np.load("data/finance/finance_features_5000.npy")
         features_normlize = normalize(features, axis=0, norm='max')
         features = sp.csr_matrix(features_normlize)
-        target_list =  np.load("data/1215_qq_data_10_3/qq_target_label_5000_1215_10_3.npy")
+        target_list =  np.load("data/finance/finance_target_label_5000.npy")
     # Store original adjacency matrix (without diagonal entries) for later
     a = 1
 
@@ -114,9 +114,7 @@ def train(unused):
     features = sparse_to_tuple(features.tocoo())
     num_features = features[2][1]
     features_nonzero = features[1].shape[0]
-
     # Create model
-
         #session part
     cost_val = []
     acc_val = []
@@ -200,18 +198,18 @@ def train(unused):
     feed_dict.update({placeholders['dropout']: FLAGS.dropout})
     pred_dis_res = model.vaeD_tilde.eval(session=sess, feed_dict=feed_dict)
     #### save new_adj without norm#############
-    print("*" * 15)
-    print("The modified adj mu")
-    print_mu(target_list, pred_dis_res, FLAGS.n_clusters)
-    print("*" * 15)
-    print_mu2(target_list, pred_dis_res, FLAGS.n_clusters)
-    print("*" * 15)
-    print("The clean adj mu")
-    clean_dis_res = model.realD_tilde.eval(session=sess, feed_dict=feed_dict)
-    print_mu(target_list, clean_dis_res, FLAGS.n_clusters)
-    print("*" * 15)
-    print_mu2(target_list, clean_dis_res, FLAGS.n_clusters)
-    print("*" * 15)
+    #print("*" * 15)
+    #print("The modified adj mu")
+    #print_mu(target_list, pred_dis_res, FLAGS.n_clusters)
+    #print("*" * 15)
+    #print_mu2(target_list, pred_dis_res, FLAGS.n_clusters)
+    #print("*" * 15)
+    #print("The clean adj mu")
+    #clean_dis_res = model.realD_tilde.eval(session=sess, feed_dict=feed_dict)
+    #print_mu(target_list, clean_dis_res, FLAGS.n_clusters)
+    #print("*" * 15)
+    #print_mu2(target_list, clean_dis_res, FLAGS.n_clusters)
+    #print("*" * 15)
     modified_adj = get_new_adj(feed_dict,sess, model)
     modified_adj = sp.csr_matrix(modified_adj)
     # sp.save_npz("transfer_new/transfer_1216_1/qq_5000_gaegan_new.npz", modified_adj)
@@ -220,7 +218,7 @@ def train(unused):
     # print("before training generator")
     #####################################################
     G_loss_min = 1000
-    if FLAGS.train == True:
+    if FLAGS.test == False:
         for epoch in range(FLAGS.epochs):
             t = time.time()
             # run Encoder's optimizer
@@ -254,10 +252,9 @@ def train(unused):
                     print("min G_loss new")
                 if G_loss < G_loss_min:
                     G_loss_min = G_loss
-            if (epoch % 200 ==1) and if_save_model:
+            if (epoch % 200 ==0) and if_save_model:
                 saver.save(sess,checkpoints_dir, global_step = epoch, write_meta_graph = False)
-                print("Epoch:", '%04d' % (epoch + 1),
-                      "time=", "{:.5f}".format(time.time() - t))
+                print("Save the model at epoch:", '%04d' % (epoch + 1))
     if if_save_model:
         saver.save(sess, checkpoints_dir, global_step=FLAGS.epochs, write_meta_graph=False)
     print("Optimization Finished!")
@@ -290,10 +287,10 @@ def train(unused):
     temp_ori = adj_norm_sparse.todense().A.reshape(-1)
     #mutual_info = normalized_mutual_info_score(temp_pred, temp_ori)
     #################################### the KL for the discriminator
-    gaegan_KL, dis_KL = sess.run([model.gaegan_KL, model.dis_KL], feed_dict = feed_dict)
-    gaegan_pred, clean_pred = sess.run([model.Dis_z_gaegan, model.Dis_z_clean], feed_dict)
+    #gaegan_KL, dis_KL = sess.run([model.gaegan_KL, model.dis_KL], feed_dict = feed_dict)
+    #gaegan_pred, clean_pred = sess.run([model.Dis_z_gaegan, model.Dis_z_clean], feed_dict)
     ####################################################################
-    return new_adj, x_tilde_out
+    return
 
 
 FLAGS = flags.FLAGS

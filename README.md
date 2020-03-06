@@ -8,10 +8,10 @@ The Implemention of paper "Adversarial Attack on Community Detection by Hiding I
 
 To train the CD-ATTACK model, please run the *main.py* as `python main.py`
 
-To restore a trained model, the command is `python main.py --train False --trained_our_path [THE CHECKPOINT NAME]`
+To restore a trained model, the command is `python main.py --test --trained_our_path [THE CHECKPOINT NAME]`
 
 The checkpoint name is formated as the string of the time point of starting the training process. eg. 
-`python main.py --train False --trained_our_path 200305112921` .The checkpoints will be recorded automatically for every training process. And the checkpoints files are placed in directory checkpoints/
+`python main.py --train test --trained_our_path 200305112921` .The checkpoints will be recorded automatically for every training process. And the checkpoints files are placed in directory checkpoints/
 
 The default dataset is dblp with fixed target users. To change the other dataset or modify other changeable parameters, please run `python main.py -h` to see the details.
  
