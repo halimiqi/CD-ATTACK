@@ -49,7 +49,7 @@ flags.DEFINE_integer("latent_dim" , 16, "the dim of latent code")
 flags.DEFINE_float("learn_rate_init" , 1e-02, "the init of learn rate")
 ##PPNP parameters
 flags.DEFINE_float('alpha', 0.1, 'the parametor for PPNP, the restart rate')
-flags.DEFINE_string('dis_name', "PPNP", 'the name of community detection, it can be "GCN" and "PPNP"')
+flags.DEFINE_string('comm_name', "PPNP", 'the name of community detection, it can be "GCN" and "PPNP"')
 flags.DEFINE_string("trained_base_path", '191216023843', "The path for the trained base model")
 flags.DEFINE_string("trained_our_path", '200304135412', "The path for the trained model")
 flags.DEFINE_integer("k", 10, "The k edges to delete")
@@ -137,7 +137,7 @@ def train(unused):
     # build models
     model = None
     if model_str == "cdattack":
-        model = cdattack(placeholders, num_features, num_nodes, features_nonzero, new_learning_rate, target_list, FLAGS.alpha, FLAGS.dis_name)
+        model = cdattack(placeholders, num_features, num_nodes, features_nonzero, new_learning_rate, target_list, FLAGS.alpha, FLAGS.comm_name)
         model.build_model()
     pos_weight = float(adj.shape[0] * adj.shape[0] - adj.sum()) / adj.sum()
     norm = adj.shape[0] * adj.shape[0] / float((adj.shape[0] * adj.shape[0] - adj.sum()) * 2)
@@ -196,12 +196,12 @@ def train(unused):
             if epoch % 50 == 0:
                 print("Epoch:", '%04d' % (epoch + 1),
                       "time=", "{:.5f}".format(time.time() - t))
-                D_loss_clean, D_loss, G_loss,new_learn_rate_value = sess.run([opt.D_mincut_loss_clean,opt.D_mincut_loss, opt.G_comm_loss,new_learning_rate],feed_dict=feed_dict)
+                comm_loss_clean, comm_loss, G_loss,new_learn_rate_value = sess.run([opt.D_mincut_loss_clean,opt.D_mincut_loss, opt.G_comm_loss,new_learning_rate],feed_dict=feed_dict)
 
                 new_adj = model.new_adj_output.eval(session = sess, feed_dict = feed_dict)
                 temp_pred = new_adj.reshape(-1)
                 temp_ori = adj_label_sparse.todense().A.reshape(-1)
-                print("Step %d:D_clean:loss = %.7f ,  D: loss = %.7f G: loss=%.7f , LR=%.7f" % (epoch,D_loss_clean, D_loss, G_loss,new_learn_rate_value))
+                print("Step %d:Loss Lu_clean = %.7f ,  Loss Lu = %.7f Loss Lg: loss=%.7f , LR=%.7f" % (epoch,comm_loss_clean, comm_loss, G_loss,new_learn_rate_value))
                 ## check the D_loss_min
                 if (G_loss < G_loss_min) and (epoch > int(FLAGS.epochs / 2) + 1) and (if_save_model):
                     saver.save(sess, checkpoints_dir, global_step=epoch, write_meta_graph=False)
