@@ -28,7 +28,7 @@ def print_similarity(pred, target_label_dict):
     print(np.mean(similar_list))
 
 
-def print_mu(target_list, pred_dis_res,n_clusters):
+def print_M1(target_list, pred_dis_res,n_clusters):
     """
     print the mu1 of target nodes
     :param target_list:
@@ -41,11 +41,11 @@ def print_mu(target_list, pred_dis_res,n_clusters):
         target_pred = pred_dis_res[targets]
         max_index =  np.argmax(target_pred, axis=1)
         out_list.append(((len(np.unique(max_index)) - 1) / (np.max([n_clusters-1, 1]) * (np.max(np.bincount(max_index))))))
-    print("The mu_1 is:%f"%(np.mean(out_list)))
+    print("The M1 is:%f"%(np.mean(out_list)))
     return np.mean(out_list)
 
 
-def print_mu2(target_list, pred_dis_res, n_clusters):
+def print_M2(target_list, pred_dis_res, n_clusters):
     """
     print mu2 of the target groups
     :param target_list:
@@ -72,7 +72,7 @@ def print_mu2(target_list, pred_dis_res, n_clusters):
         group_len -= len(targets)
         const_denom = np.max([overall_n - len(targets), 1])
         out_list.append(group_len / const_denom)
-    print("The mu2 is %f" %(np.mean(out_list)))
+    print("The M2 is %f" %(np.mean(out_list)))
     return np.mean(out_list)
 
 

@@ -13,7 +13,7 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from tensorflow.python.client import device_lib
 from preprocessing import preprocess_graph, construct_feed_dict, sparse_to_tuple, mask_test_edges,get_target_nodes_and_comm_labels, construct_feed_dict_trained
-from ops import print_mu, print_mu2
+from ops import print_M1, print_M2
 # set the random seed
 np.random.seed(121)
 tf.set_random_seed(121)
@@ -32,7 +32,7 @@ flags.DEFINE_integer('hidden3', 32, 'Number of units in graphite hidden layers.'
 flags.DEFINE_float('weight_decay', 0., 'Weight for L2 loss on embedding matrix.')
 flags.DEFINE_float('dropout', 0.3, 'Dropout rate (1 - keep probability).')
 flags.DEFINE_float('g_scale_factor', 1- 0.75/2, 'the parametor for generate fake loss')
-flags.DEFINE_float('d_scale_factor', 0.25, 'the parametor for discriminator real loss')
+flags.DEFINE_float('d_scale_factor', 0.25, 'the parametor for community detection real loss')
 flags.DEFINE_float('g_gamma', 1e-06, 'the parametor for generate loss, it has one term with encoder\'s loss')
 flags.DEFINE_float('G_KL_r', 0.1, 'The r parameters for the G KL loss')
 flags.DEFINE_float('mincut_r', 0.01, 'The r parameters for the cutmin loss orth loss')
@@ -49,7 +49,7 @@ flags.DEFINE_integer("latent_dim" , 16, "the dim of latent code")
 flags.DEFINE_float("learn_rate_init" , 1e-02, "the init of learn rate")
 ##PPNP parameters
 flags.DEFINE_float('alpha', 0.1, 'the parametor for PPNP, the restart rate')
-flags.DEFINE_string('dis_name', "PPNP", 'the name of discriminator, it can be "GCN" and "PPNP"')
+flags.DEFINE_string('dis_name', "PPNP", 'the name of community detection, it can be "GCN" and "PPNP"')
 flags.DEFINE_string("trained_base_path", '191216023843', "The path for the trained base model")
 flags.DEFINE_string("trained_our_path", '200304135412', "The path for the trained model")
 flags.DEFINE_integer("k", 10, "The k edges to delete")
@@ -73,8 +73,7 @@ def get_new_adj(feed_dict, sess, model):
 def train(unused):
     if_drop_edge = True
     if_save_model = not FLAGS.test
-    # if train the discriminator
-    if_train_dis = False
+    if_train_dis = False  # if train the community detection while training the generator part
     restore_trained_our = FLAGS.test
     showed_target_idx = 0   # the target index group of targets you want to show
     ##################################
@@ -219,19 +218,17 @@ def train(unused):
     ##### The final results ######
     feed_dict.update({placeholders['dropout']: 0})
     pred_dis_res = model.vaeD_tilde.eval(session=sess, feed_dict=feed_dict)
-    print("*" * 30)
     print("*" * 15)
-    print("The modified adj mu")
-    print_mu(target_list, pred_dis_res, FLAGS.n_clusters)
+    print("The modified matrics")
+    print_M1(target_list, pred_dis_res, FLAGS.n_clusters)
     print("*" * 15)
-    print_mu2(target_list, pred_dis_res, FLAGS.n_clusters)
+    print_M2(target_list, pred_dis_res, FLAGS.n_clusters)
     print("*" * 15)
     new_adj = get_new_adj(feed_dict,sess, model)
     x_tilde_out = model.new_adj_output.eval(session=sess, feed_dict=feed_dict)
     temp_pred = new_adj.reshape(-1)
     temp_ori = adj_norm_sparse.todense().A.reshape(-1)
     return
-
 
 FLAGS = flags.FLAGS
 if __name__ == "__main__":
