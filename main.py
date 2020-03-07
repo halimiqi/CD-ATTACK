@@ -25,7 +25,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ["KMP_WARNINGS"] = "FALSE"
 flags.DEFINE_integer('n_clusters', 10, 'Number of clusters.')
 #flags.DEFINE_string("target_index_list","10,35", "The index for the target_index")
-flags.DEFINE_integer('epochs', 2000, 'Number of epochs to train.')
+flags.DEFINE_integer('epochs', 1000, 'Number of epochs to train.')
 flags.DEFINE_integer('hidden1', 32, 'Number of units in hidden layer 1.')
 flags.DEFINE_integer('hidden2', 16, 'Number of units in hidden layer 2.')
 flags.DEFINE_integer('hidden3', 32, 'Number of units in graphite hidden layers.')

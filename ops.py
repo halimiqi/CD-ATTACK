@@ -30,7 +30,7 @@ def print_similarity(pred, target_label_dict):
 
 def print_M1(target_list, pred_dis_res,n_clusters):
     """
-    print the mu1 of target nodes
+    print the M1 of target nodes
     :param target_list:
     :param pred_dis_res:
     :param n_clusters:
@@ -47,7 +47,7 @@ def print_M1(target_list, pred_dis_res,n_clusters):
 
 def print_M2(target_list, pred_dis_res, n_clusters):
     """
-    print mu2 of the target groups
+    print M2 of the target groups
     :param target_list:
     :param pred_dis_res:
     :param n_clusters:
